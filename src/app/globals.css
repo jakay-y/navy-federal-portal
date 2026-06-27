@@ -1,0 +1,39 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&display=swap');
+
+@layer base {
+  :root {
+    --background: #F8FAFC;
+    --foreground: #1E293B;
+    --navy-900: #0A2540;
+    --navy-800: #0F3460;
+    --accent-blue: #1E40AF;
+  }
+
+  * {
+    @apply border-slate-200;
+  }
+
+  body {
+    @apply bg-slate-50 text-slate-800 antialiased;
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+  }
+}
+
+@layer utilities {
+  .text-balance {
+    text-wrap: balance;
+  }
+
+  .hero-gradient {
+    background: linear-gradient(
+      135deg,
+      rgba(10, 37, 64, 0.92) 0%,
+      rgba(30, 64, 175, 0.75) 50%,
+      rgba(10, 37, 64, 0.88) 100%
+    );
+  }
+}
