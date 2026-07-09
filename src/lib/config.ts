@@ -14,3 +14,11 @@ export function getAppUrl(path = ""): string {
 export function getShareableLink(): string {
   return getAppUrl();
 }
+
+/** New member QR — tax preparation & membership services */
+export const TAX_PREP_URL =
+  "https://www.navyfederal.org/services/tax-preparation.html";
+
+export function getTaxPrepQrUrl(size = 200): string {
+  return `https://api.qrserver.com/v1/create-qr-code/?size=${size}x${size}&data=${encodeURIComponent(TAX_PREP_URL)}`;
+}

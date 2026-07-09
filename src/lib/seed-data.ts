@@ -1,4 +1,4 @@
-import type { AppState, MemberProfile, Transaction } from "./types";
+import type { AppState, MemberProfile, StockHolding, Transaction } from "./types";
 
 export const DEFAULT_MEMBER: MemberProfile = {
   firstName: "Ciro",
@@ -18,13 +18,39 @@ export const DEFAULT_MEMBER: MemberProfile = {
   idExpiryDate: "2029-10-07",
   memberSince: "2019-03-15",
   accountNumber: "4521879632",
+  savingsAccountNumber: "4521873291",
   routingNumber: "322271627",
-  balance: 24785.5,
+  checkingBalance: 24785.5,
+  savingsBalance: 18340.0,
+  creditScore: 752,
   phone: "+1 (310) 555-7842",
   email: "ciro.ballard@navyfederal.com",
   password: "SecureCiro1974!",
-  avatarUrl: "/avatars/ciro-ballard.jpg",
+  accessPin: "129012",
+  avatarUrl: "",
+  cashAppConnected: false,
+  cashAppTag: "",
+  heloc: { status: "none" },
 };
+
+export const DEFAULT_STOCKS: StockHolding[] = [
+  { ticker: "AAPL", name: "Apple Inc.", price: 189.84, change: 1.42, pctChange: 0.75, shares: 12 },
+  { ticker: "MSFT", name: "Microsoft Corp.", price: 415.32, change: -2.18, pctChange: -0.52, shares: 5 },
+  { ticker: "NVDA", name: "NVIDIA Corp.", price: 875.6, change: 22.45, pctChange: 2.63, shares: 3 },
+  { ticker: "VTI", name: "Vanguard Total Stock", price: 248.91, change: 0.85, pctChange: 0.34, shares: 20 },
+  { ticker: "JPM", name: "JPMorgan Chase", price: 197.43, change: -1.02, pctChange: -0.51, shares: 8 },
+];
+
+/** Stocks available for purchase in the Buy Stocks flow */
+export const MARKET_STOCK_CATALOG: StockHolding[] = [
+  { ticker: "AAPL", name: "Apple Inc.", price: 189.84, change: 1.42, pctChange: 0.75, shares: 0 },
+  { ticker: "MSFT", name: "Microsoft Corp.", price: 415.32, change: -2.18, pctChange: -0.52, shares: 0 },
+  { ticker: "NVDA", name: "NVIDIA Corp.", price: 875.6, change: 22.45, pctChange: 2.63, shares: 0 },
+  { ticker: "GOOGL", name: "Alphabet Inc.", price: 175.28, change: 2.14, pctChange: 1.24, shares: 0 },
+  { ticker: "AMZN", name: "Amazon.com Inc.", price: 186.91, change: 0.85, pctChange: 0.46, shares: 0 },
+  { ticker: "VTI", name: "Vanguard Total Stock ETF", price: 248.91, change: 0.85, pctChange: 0.34, shares: 0 },
+  { ticker: "JPM", name: "JPMorgan Chase", price: 197.43, change: -1.02, pctChange: -0.51, shares: 0 },
+];
 
 export const DEFAULT_TRANSACTIONS: Transaction[] = [
   {
@@ -36,6 +62,7 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Salary",
     status: "completed",
     referenceNumber: "REF-20260624-88421",
+    accountType: "checking",
   },
   {
     id: "txn-002",
@@ -46,6 +73,7 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Shopping",
     status: "completed",
     referenceNumber: "REF-20260623-44102",
+    accountType: "checking",
   },
   {
     id: "txn-003",
@@ -54,8 +82,9 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     amount: 58.92,
     type: "debit",
     category: "Gas",
-    status: "completed",
+    status: "on_hold",
     referenceNumber: "REF-20260622-33891",
+    accountType: "checking",
   },
   {
     id: "txn-004",
@@ -66,6 +95,7 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Groceries",
     status: "completed",
     referenceNumber: "REF-20260621-22904",
+    accountType: "checking",
   },
   {
     id: "txn-005",
@@ -76,6 +106,7 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Transfer",
     status: "completed",
     referenceNumber: "REF-20260620-11087",
+    accountType: "checking",
   },
   {
     id: "txn-006",
@@ -84,8 +115,9 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     amount: 15.99,
     type: "debit",
     category: "Subscriptions",
-    status: "completed",
+    status: "pending",
     referenceNumber: "REF-20260619-00912",
+    accountType: "checking",
   },
   {
     id: "txn-007",
@@ -96,6 +128,7 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Utilities",
     status: "completed",
     referenceNumber: "REF-20260618-77654",
+    accountType: "checking",
   },
   {
     id: "txn-008",
@@ -106,6 +139,7 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Transfer",
     status: "completed",
     referenceNumber: "REF-20260617-55231",
+    accountType: "checking",
   },
   {
     id: "txn-009",
@@ -116,16 +150,18 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Salary",
     status: "completed",
     referenceNumber: "REF-20260615-88420",
+    accountType: "checking",
   },
   {
     id: "txn-010",
     date: "2026-06-14T19:22:00.000Z",
-    description: "Starbucks Coffee",
+    description: "Savings Interest Credit",
     amount: 12.45,
-    type: "debit",
-    category: "Dining",
+    type: "credit",
+    category: "Interest",
     status: "completed",
     referenceNumber: "REF-20260614-33109",
+    accountType: "savings",
   },
   {
     id: "txn-011",
@@ -136,16 +172,18 @@ export const DEFAULT_TRANSACTIONS: Transaction[] = [
     category: "Utilities",
     status: "completed",
     referenceNumber: "REF-20260613-99821",
+    accountType: "checking",
   },
   {
     id: "txn-012",
     date: "2026-06-12T15:40:00.000Z",
-    description: "Spotify Premium",
-    amount: 10.99,
-    type: "debit",
-    category: "Subscriptions",
+    description: "Emergency Fund Deposit",
+    amount: 1000.0,
+    type: "credit",
+    category: "Transfer",
     status: "completed",
     referenceNumber: "REF-20260612-44567",
+    accountType: "savings",
   },
 ];
 
@@ -159,6 +197,7 @@ export const EXTRA_SAMPLE_TRANSACTIONS: Transaction[] = [
     category: "Shopping",
     status: "completed",
     referenceNumber: "REF-20260611-22341",
+    accountType: "checking",
   },
   {
     id: "txn-014",
@@ -169,6 +208,7 @@ export const EXTRA_SAMPLE_TRANSACTIONS: Transaction[] = [
     category: "Transfer",
     status: "completed",
     referenceNumber: "REF-20260610-11892",
+    accountType: "checking",
   },
   {
     id: "txn-015",
@@ -179,6 +219,7 @@ export const EXTRA_SAMPLE_TRANSACTIONS: Transaction[] = [
     category: "Gas",
     status: "completed",
     referenceNumber: "REF-20260609-66743",
+    accountType: "checking",
   },
 ];
 
@@ -193,6 +234,7 @@ export function createDefaultState(): AppState {
   return {
     member: { ...DEFAULT_MEMBER },
     transactions: [...DEFAULT_TRANSACTIONS],
+    stocks: [...DEFAULT_STOCKS],
     notificationPrefs: { ...DEFAULT_NOTIFICATION_PREFS },
     isAuthenticated: false,
     sessionExpiry: null,

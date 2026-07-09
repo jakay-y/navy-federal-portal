@@ -1,12 +1,22 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { Eye, EyeOff, Lock, Mail, ShieldCheck, CheckCircle2 } from "lucide-react";
+import {
+  Eye,
+  EyeOff,
+  Lock,
+  Mail,
+  ShieldCheck,
+  CheckCircle2,
+  Loader2,
+  Fingerprint,
+  Server,
+} from "lucide-react";
 import { toast } from "sonner";
 import { Dialog, DialogContent } from "@/components/ui/dialog";
 import { Button } from "@/components/ui/button";
@@ -14,9 +24,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Logo } from "@/components/brand/logo";
 import { OtpInput } from "@/components/auth/otp-input";
+import { NewMemberPanel } from "@/components/auth/new-member-panel";
 import { useMember } from "@/context/member-context";
-import { formatPhoneLast4 } from "@/lib/format";
-import { DEMO_OTP } from "@/lib/types";
+import { DEMO_ACCESS_PIN } from "@/lib/types";
 
 const loginSchema = z.object({
   email: z.string().email("Please enter a valid email address"),
@@ -24,8 +34,7 @@ const loginSchema = z.object({
 });
 
 type LoginForm = z.infer<typeof loginSchema>;
-
-type AuthStep = "login" | "otp" | "success";
+type AuthStep = "login" | "device-verify" | "pin" | "processing" | "success";
 type AuthTab = "login" | "new-member";
 
 interface AuthModalProps {
@@ -33,72 +42,98 @@ interface AuthModalProps {
   onOpenChange: (open: boolean) => void;
 }
 
+const VERIFY_STEPS = [
+  "Validating credentials",
+  "Checking device fingerprint",
+  "Scanning for active threats",
+  "Preparing secure session",
+];
+
 export function AuthModal({ open, onOpenChange }: AuthModalProps) {
   const router = useRouter();
   const { member, login } = useMember();
   const [tab, setTab] = useState<AuthTab>("login");
   const [step, setStep] = useState<AuthStep>("login");
   const [showPassword, setShowPassword] = useState(false);
-  const [otpError, setOtpError] = useState(false);
-  const [countdown, setCountdown] = useState(60);
-  const [otpVerifying, setOtpVerifying] = useState(false);
+  const [pinError, setPinError] = useState(false);
+  const [pinVerifying, setPinVerifying] = useState(false);
+  const [verifyProgress, setVerifyProgress] = useState(0);
+  const [verifyLabel, setVerifyLabel] = useState(VERIFY_STEPS[0]);
 
   const {
     register,
     handleSubmit,
+    reset: resetForm,
     formState: { errors, isSubmitting },
   } = useForm<LoginForm>({
     resolver: zodResolver(loginSchema),
-    defaultValues: { email: member.email },
+    defaultValues: { email: "", password: "" },
   });
 
-  const startCountdown = () => {
-    setCountdown(60);
+  useEffect(() => {
+    if (step !== "device-verify") return;
+    setVerifyProgress(0);
+    setVerifyLabel(VERIFY_STEPS[0]);
+    let stepIdx = 0;
     const interval = setInterval(() => {
-      setCountdown((c) => {
-        if (c <= 1) {
-          clearInterval(interval);
-          return 0;
+      setVerifyProgress((p) => {
+        const next = Math.min(p + 8, 100);
+        if (next >= (stepIdx + 1) * 25 && stepIdx < VERIFY_STEPS.length - 1) {
+          stepIdx += 1;
+          setVerifyLabel(VERIFY_STEPS[stepIdx]);
         }
-        return c - 1;
+        return next;
       });
-    }, 1000);
-  };
+    }, 120);
+
+    const timeout = setTimeout(() => {
+      clearInterval(interval);
+      setStep("pin");
+      toast.info("Enter your secure access PIN to continue.");
+    }, 2200);
+
+    return () => {
+      clearInterval(interval);
+      clearTimeout(timeout);
+    };
+  }, [step]);
+
+  useEffect(() => {
+    if (step !== "processing") return;
+    const timeout = setTimeout(() => {
+      setStep("success");
+      login();
+      toast.success("Secure session established.");
+      setTimeout(() => {
+        onOpenChange(false);
+        router.push("/dashboard");
+      }, 1600);
+    }, 2000);
+    return () => clearTimeout(timeout);
+  }, [step, login, onOpenChange, router]);
 
   const onLoginSubmit = (data: LoginForm) => {
-    if (data.email !== member.email || data.password !== member.password) {
+    const emailMatch = data.email.trim().toLowerCase() === member.email.toLowerCase();
+    if (!emailMatch || data.password !== member.password) {
       toast.error("Invalid credentials. Please check your email and password.");
       return;
     }
-    setStep("otp");
-    startCountdown();
-    toast.success("Verification code sent to your phone.");
+    setStep("device-verify");
+    toast.success("Credentials verified. Running security checks...");
   };
 
-  const handleOtpComplete = (code: string) => {
-    setOtpVerifying(true);
+  const handlePinComplete = (code: string) => {
+    setPinVerifying(true);
     setTimeout(() => {
-      if (code === DEMO_OTP) {
-        setOtpError(false);
-        setStep("success");
-        login();
-        toast.success("Identity verified successfully.");
-        setTimeout(() => {
-          onOpenChange(false);
-          router.push("/dashboard");
-        }, 1800);
+      if (code === DEMO_ACCESS_PIN || code === member.accessPin) {
+        setPinError(false);
+        setStep("processing");
       } else {
-        setOtpError(true);
-        toast.error("Invalid verification code. Please try again.");
+        setPinError(true);
+        toast.error("Invalid access PIN. Please try again.");
       }
-      setOtpVerifying(false);
-    }, 600);
-  };
-
-  const handleResend = () => {
-    if (countdown > 0) return;
-    startCountdown();
-    toast.success("A new verification code has been sent.");
+      setPinVerifying(false);
+    }, 700);
   };
 
   const handleClose = (isOpen: boolean) => {
@@ -106,14 +141,14 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
       setTimeout(() => {
         setStep("login");
         setTab("login");
-        setOtpError(false);
+        setPinError(false);
         setShowPassword(false);
+        setVerifyProgress(0);
+        resetForm({ email: "", password: "" });
       }, 300);
     }
     onOpenChange(isOpen);
   };
-
-  const phoneLast4 = formatPhoneLast4(member.phone);
 
   return (
     <Dialog open={open} onOpenChange={handleClose}>
@@ -127,17 +162,27 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
             </p>
           </div>
 
-          {tab === "login" && step === "login" && (
+          {step === "login" && (
             <div className="mb-6 flex rounded-xl bg-slate-100 p-1">
               <button
+                type="button"
                 onClick={() => setTab("login")}
-                className="flex-1 rounded-lg bg-white py-2.5 text-sm font-semibold text-navy-900 shadow-sm transition-all"
+                className={`flex-1 rounded-lg py-2.5 text-sm font-semibold transition-all ${
+                  tab === "login"
+                    ? "bg-white text-navy-900 shadow-sm"
+                    : "text-slate-500 hover:text-navy-900"
+                }`}
               >
                 Login
               </button>
               <button
+                type="button"
                 onClick={() => setTab("new-member")}
-                className="flex-1 rounded-lg py-2.5 text-sm font-medium text-slate-500 transition-all hover:text-navy-900"
+                className={`flex-1 rounded-lg py-2.5 text-sm font-medium transition-all ${
+                  tab === "new-member"
+                    ? "bg-white text-navy-900 shadow-sm font-semibold"
+                    : "text-slate-500 hover:text-navy-900"
+                }`}
               >
                 New Member
               </button>
@@ -145,24 +190,14 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
           )}
 
           <AnimatePresence mode="wait">
-            {tab === "new-member" && (
+            {tab === "new-member" && step === "login" && (
               <motion.div
                 key="new-member"
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: -10 }}
-                className="text-center"
               >
-                <div className="mb-4 rounded-2xl bg-blue-50 p-6">
-                  <ShieldCheck className="mx-auto mb-3 h-10 w-10 text-accent-blue" />
-                  <p className="text-sm leading-relaxed text-slate-600">
-                    This account was created for you by our team. Please use the login
-                    credentials shared with you.
-                  </p>
-                </div>
-                <Button variant="outline" onClick={() => setTab("login")} className="w-full">
-                  Go to Login
-                </Button>
+                <NewMemberPanel onGoToLogin={() => setTab("login")} />
               </motion.div>
             )}
 
@@ -174,6 +209,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 exit={{ opacity: 0, x: 20 }}
                 onSubmit={handleSubmit(onLoginSubmit)}
                 className="space-y-4"
+                autoComplete="off"
               >
                 <div className="space-y-2">
                   <Label htmlFor="email">Email Address</Label>
@@ -183,7 +219,11 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       id="email"
                       type="email"
                       className="pl-10"
-                      placeholder="ciro.ballard@navyfederal.com"
+                      placeholder="Enter your email address"
+                      autoComplete="off"
+                      autoCorrect="off"
+                      autoCapitalize="off"
+                      spellCheck={false}
                       {...register("email")}
                     />
                   </div>
@@ -201,6 +241,7 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                       type={showPassword ? "text" : "password"}
                       className="pl-10 pr-10"
                       placeholder="Enter your password"
+                      autoComplete="new-password"
                       {...register("password")}
                     />
                     <button
@@ -227,59 +268,92 @@ export function AuthModal({ open, onOpenChange }: AuthModalProps) {
                 </button>
 
                 <Button type="submit" className="w-full" size="lg" disabled={isSubmitting}>
-                  {isSubmitting ? "Signing in..." : "Continue"}
+                  {isSubmitting ? "Verifying..." : "Continue"}
                 </Button>
               </motion.form>
             )}
 
-            {tab === "login" && step === "otp" && (
+            {tab === "login" && step === "device-verify" && (
               <motion.div
-                key="otp"
+                key="device-verify"
+                initial={{ opacity: 0, y: 10 }}
+                animate={{ opacity: 1, y: 0 }}
+                exit={{ opacity: 0, y: -10 }}
+                className="py-4 text-center"
+              >
+                <div className="mx-auto mb-5 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                  <Fingerprint className="h-8 w-8 text-accent-blue" />
+                </div>
+                <h3 className="text-lg font-semibold text-navy-900">Security Verification</h3>
+                <p className="mt-2 text-sm text-slate-500">{verifyLabel}...</p>
+                <div className="mx-auto mt-6 h-2 w-full max-w-xs overflow-hidden rounded-full bg-slate-100">
+                  <motion.div
+                    className="h-full rounded-full bg-gradient-to-r from-navy-800 to-accent-blue"
+                    animate={{ width: `${verifyProgress}%` }}
+                    transition={{ duration: 0.2 }}
+                  />
+                </div>
+              </motion.div>
+            )}
+
+            {tab === "login" && step === "pin" && (
+              <motion.div
+                key="pin"
                 initial={{ opacity: 0, x: 20 }}
                 animate={{ opacity: 1, x: 0 }}
                 exit={{ opacity: 0, x: -20 }}
                 className="text-center"
               >
+                <div className="mx-auto mb-4 flex h-14 w-14 items-center justify-center rounded-full bg-navy-900/5">
+                  <ShieldCheck className="h-7 w-7 text-navy-900" />
+                </div>
                 <h3 className="mb-2 text-lg font-semibold text-navy-900">
-                  Verify Your Identity
+                  Enter Secure Access PIN
                 </h3>
                 <p className="mb-6 text-sm text-slate-500">
-                  We sent a 6-digit code to your phone ending in{" "}
-                  <span className="font-semibold text-navy-900">{phoneLast4}</span>
+                  Enter your 6-digit member PIN to authorize dashboard access.
                 </p>
 
                 <OtpInput
-                  onComplete={handleOtpComplete}
-                  hasError={otpError}
-                  disabled={otpVerifying}
+                  length={6}
+                  onComplete={handlePinComplete}
+                  hasError={pinError}
+                  disabled={pinVerifying}
                 />
 
-                {otpError && (
+                {pinError && (
                   <p className="mt-3 text-sm text-red-500">
-                    Incorrect code. Please try again.
+                    Incorrect PIN. Please try again.
                   </p>
                 )}
 
-                <div className="mt-6 flex items-center justify-center gap-2 text-sm text-slate-500">
-                  {countdown > 0 ? (
-                    <span>Resend code in {countdown}s</span>
-                  ) : (
-                    <button
-                      onClick={handleResend}
-                      className="font-semibold text-accent-blue hover:underline"
-                    >
-                      Resend code
-                    </button>
-                  )}
-                </div>
-
                 <Button
                   variant="ghost"
-                  className="mt-4"
+                  className="mt-6"
                   onClick={() => setStep("login")}
                 >
                   Back to login
                 </Button>
+              </motion.div>
+            )}
+
+            {tab === "login" && step === "processing" && (
+              <motion.div
+                key="processing"
+                initial={{ opacity: 0, scale: 0.95 }}
+                animate={{ opacity: 1, scale: 1 }}
+                className="flex flex-col items-center py-8 text-center"
+              >
+                <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-blue-50">
+                  <Server className="h-8 w-8 text-accent-blue" />
+                </div>
+                <Loader2 className="mb-4 h-8 w-8 animate-spin text-navy-900" />
+                <h3 className="text-lg font-semibold text-navy-900">
+                  Establishing Secure Session
+                </h3>
+                <p className="mt-2 text-sm text-slate-500">
+                  Encrypting connection and loading your accounts...
+                </p>
               </motion.div>
             )}
 

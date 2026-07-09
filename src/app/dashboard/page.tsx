@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { DashboardNav } from "@/components/dashboard/dashboard-nav";
 import { OverviewTab } from "@/components/dashboard/overview-tab";
+import { InvestmentsTab } from "@/components/dashboard/investments-tab";
 import { TransactionsTab } from "@/components/dashboard/transactions-tab";
 import { SettingsTab } from "@/components/dashboard/settings-tab";
 import { ReceiptModal } from "@/components/dashboard/receipt-modal";
@@ -40,8 +41,10 @@ export default function DashboardPage() {
           <OverviewTab
             onViewAllTransactions={() => setActiveTab("transactions")}
             onViewReceipt={setReceiptTxnId}
+            onViewInvestments={() => setActiveTab("investments")}
           />
         )}
+        {activeTab === "investments" && <InvestmentsTab />}
         {activeTab === "transactions" && (
           <TransactionsTab onViewReceipt={setReceiptTxnId} />
         )}

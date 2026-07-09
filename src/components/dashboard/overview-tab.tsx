@@ -3,73 +3,77 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
 import {
-  Eye,
-  EyeOff,
   Send,
   Receipt,
   ArrowLeftRight,
-  TrendingUp,
   ArrowUpRight,
   ArrowDownLeft,
+  Home,
+  Smartphone,
+  BarChart3,
 } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { ActionModals } from "@/components/dashboard/action-modals";
+import { AccountCards } from "@/components/dashboard/account-cards";
+import { CreditScoreCard } from "@/components/dashboard/credit-score-card";
+import { TransactionFlowModal, type TransactionFlowType } from "@/components/dashboard/transaction-flow-modal";
+import { HelocModal } from "@/components/dashboard/heloc-modal";
+import { CashAppModal } from "@/components/dashboard/cash-app-modal";
 import { useMember } from "@/context/member-context";
-import { formatCurrency, formatDate, maskAccountNumber } from "@/lib/format";
+import { formatCurrency, formatDate } from "@/lib/format";
+import { statusBadgeVariant, statusLabel } from "@/lib/transaction-status";
+import { Badge } from "@/components/ui/badge";
 
 interface OverviewTabProps {
   onViewAllTransactions: () => void;
   onViewReceipt: (id: string) => void;
+  onViewInvestments: () => void;
 }
 
-export function OverviewTab({ onViewAllTransactions, onViewReceipt }: OverviewTabProps) {
+export function OverviewTab({
+  onViewAllTransactions,
+  onViewReceipt,
+  onViewInvestments,
+}: OverviewTabProps) {
   const { member, transactions } = useMember();
-  const [balanceHidden, setBalanceHidden] = useState(false);
-  const [activeModal, setActiveModal] = useState<"send" | "bill" | "transfer" | null>(null);
+  const [activeModal, setActiveModal] = useState<TransactionFlowType>(null);
+  const [helocOpen, setHelocOpen] = useState(false);
+  const [cashAppOpen, setCashAppOpen] = useState(false);
 
   const recent = transactions.slice(0, 5);
 
   const quickActions = [
     { id: "send" as const, label: "Send Money", icon: Send, color: "bg-blue-50 text-accent-blue" },
     { id: "bill" as const, label: "Pay Bill", icon: Receipt, color: "bg-emerald-50 text-emerald-600" },
-    { id: "transfer" as const, label: "Internal Transfer", icon: ArrowLeftRight, color: "bg-violet-50 text-violet-600" },
+    { id: "transfer" as const, label: "Transfer", icon: ArrowLeftRight, color: "bg-violet-50 text-violet-600" },
   ];
+
+  const featureCards = [
+    { label: "Apply for HELOC", icon: Home, color: "bg-navy-900/5 text-navy-900", onClick: () => setHelocOpen(true) },
+    { label: "Connect Cash App", icon: Smartphone, color: "bg-emerald-50 text-emerald-600", onClick: () => setCashAppOpen(true) },
+    { label: "Investments", icon: BarChart3, color: "bg-blue-50 text-accent-blue", onClick: onViewInvestments },
+  ];
+
+  const hour = new Date().getHours();
+  const greeting = hour < 12 ? "Good morning" : hour < 17 ? "Good afternoon" : "Good evening";
 
   return (
     <div className="space-y-6">
       <motion.div
-        initial={{ opacity: 0, y: 20 }}
+        initial={{ opacity: 0, y: 12 }}
         animate={{ opacity: 1, y: 0 }}
-        transition={{ duration: 0.4 }}
+        className="rounded-2xl bg-white p-6 shadow-sm ring-1 ring-slate-100"
       >
-        <Card className="overflow-hidden rounded-3xl border-0 bg-gradient-to-br from-navy-900 via-navy-800 to-accent-blue shadow-xl">
-          <CardContent className="p-8">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="text-sm font-medium text-white/70">Available Balance</p>
-                <p className="mt-2 text-4xl font-bold tracking-tight text-white sm:text-5xl">
-                  {formatCurrency(member.balance, balanceHidden)}
-                </p>
-                <p className="mt-3 text-sm text-white/60">
-                  Checking • {maskAccountNumber(member.accountNumber)}
-                </p>
-              </div>
-              <button
-                onClick={() => setBalanceHidden(!balanceHidden)}
-                className="rounded-full bg-white/10 p-2.5 text-white transition-colors hover:bg-white/20"
-              >
-                {balanceHidden ? <EyeOff className="h-5 w-5" /> : <Eye className="h-5 w-5" />}
-              </button>
-            </div>
-
-            <div className="mt-6 flex items-center gap-2 text-sm text-white/70">
-              <TrendingUp className="h-4 w-4 text-emerald-400" />
-              <span>Member since {new Date(member.memberSince).getFullYear()}</span>
-            </div>
-          </CardContent>
-        </Card>
+        <h1 className="text-2xl font-bold text-navy-900">
+          {greeting}, {member.firstName}
+        </h1>
+        <p className="mt-1 text-sm text-slate-500">
+          Here&apos;s an overview of your accounts and activity.
+        </p>
       </motion.div>
+
+      <AccountCards />
+      <CreditScoreCard />
 
       <div className="grid grid-cols-3 gap-3 sm:gap-4">
         {quickActions.map((action, i) => (
@@ -77,16 +81,32 @@ export function OverviewTab({ onViewAllTransactions, onViewReceipt }: OverviewTa
             key={action.id}
             initial={{ opacity: 0, y: 10 }}
             animate={{ opacity: 1, y: 0 }}
-            transition={{ delay: i * 0.1 }}
+            transition={{ delay: i * 0.08 }}
             onClick={() => setActiveModal(action.id)}
             className="flex flex-col items-center gap-2 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm transition-all hover:border-slate-200 hover:shadow-md sm:p-5"
           >
             <div className={`rounded-xl p-3 ${action.color}`}>
               <action.icon className="h-5 w-5" />
             </div>
-            <span className="text-xs font-semibold text-navy-900 sm:text-sm">
-              {action.label}
-            </span>
+            <span className="text-xs font-semibold text-navy-900 sm:text-sm">{action.label}</span>
+          </motion.button>
+        ))}
+      </div>
+
+      <div className="grid gap-3 sm:grid-cols-3">
+        {featureCards.map((feat, i) => (
+          <motion.button
+            key={feat.label}
+            initial={{ opacity: 0, y: 8 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.2 + i * 0.06 }}
+            onClick={feat.onClick}
+            className="flex items-center gap-4 rounded-2xl border border-slate-100 bg-white p-4 text-left shadow-sm transition-all hover:shadow-md"
+          >
+            <div className={`rounded-xl p-3 ${feat.color}`}>
+              <feat.icon className="h-5 w-5" />
+            </div>
+            <span className="text-sm font-semibold text-navy-900">{feat.label}</span>
           </motion.button>
         ))}
       </div>
@@ -136,19 +156,26 @@ export function OverviewTab({ onViewAllTransactions, onViewReceipt }: OverviewTa
                   {txn.type === "credit" ? "+" : "-"}
                   {formatCurrency(txn.amount)}
                 </p>
-                <button
-                  onClick={() => onViewReceipt(txn.id)}
-                  className="text-xs text-accent-blue hover:underline"
-                >
-                  Receipt
-                </button>
+                <div className="mt-1 flex items-center justify-end gap-2">
+                  <Badge variant={statusBadgeVariant(txn.status)} className="text-[10px]">
+                    {statusLabel(txn.status)}
+                  </Badge>
+                  <button
+                    onClick={() => onViewReceipt(txn.id)}
+                    className="text-xs text-accent-blue hover:underline"
+                  >
+                    Receipt
+                  </button>
+                </div>
               </div>
             </motion.div>
           ))}
         </CardContent>
       </Card>
 
-      <ActionModals activeModal={activeModal} onClose={() => setActiveModal(null)} />
+      <TransactionFlowModal activeModal={activeModal} onClose={() => setActiveModal(null)} />
+      <HelocModal open={helocOpen} onOpenChange={setHelocOpen} />
+      <CashAppModal open={cashAppOpen} onOpenChange={setCashAppOpen} />
     </div>
   );
 }

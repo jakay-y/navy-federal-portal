@@ -18,6 +18,7 @@ import {
 import { Tabs, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { useMember } from "@/context/member-context";
 import { formatCurrency, formatDate } from "@/lib/format";
+import { statusBadgeVariant, statusLabel } from "@/lib/transaction-status";
 
 interface TransactionsTabProps {
   onViewReceipt: (id: string) => void;
@@ -109,7 +110,9 @@ export function TransactionsTab({ onViewReceipt }: TransactionsTabProps) {
                     <Badge variant="secondary">{txn.category}</Badge>
                   </TableCell>
                   <TableCell>
-                    <Badge variant="success">{txn.status}</Badge>
+                    <Badge variant={statusBadgeVariant(txn.status)}>
+                      {statusLabel(txn.status)}
+                    </Badge>
                   </TableCell>
                   <TableCell
                     className={`text-right font-semibold ${

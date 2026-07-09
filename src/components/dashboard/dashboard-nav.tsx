@@ -1,10 +1,10 @@
 "use client";
 
-import Image from "next/image";
 import Link from "next/link";
 import { useRouter } from "next/navigation";
 import { LogOut, ChevronDown } from "lucide-react";
 import { Logo } from "@/components/brand/logo";
+import { ProfileAvatar } from "@/components/brand/profile-avatar";
 import { Button } from "@/components/ui/button";
 import {
   DropdownMenu,
@@ -23,6 +23,7 @@ interface DashboardNavProps {
 
 const navItems = [
   { id: "overview", label: "Overview" },
+  { id: "investments", label: "Investments" },
   { id: "transactions", label: "Transactions" },
   { id: "settings", label: "Settings" },
 ];
@@ -63,17 +64,14 @@ export function DashboardNav({ activeTab, onTabChange }: DashboardNavProps) {
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="ghost" className="gap-2 px-2">
-              <div className="relative h-8 w-8 overflow-hidden rounded-full ring-2 ring-slate-100">
-                <Image
-                  src={member.avatarUrl}
-                  alt={`${member.firstName} ${member.lastName}`}
-                  fill
-                  className="object-cover"
-                />
-              </div>
-              <span className="hidden text-sm font-medium sm:inline">
-                {member.firstName}
-              </span>
+              <ProfileAvatar
+                firstName={member.firstName}
+                lastName={member.lastName}
+                avatarUrl={member.avatarUrl}
+                size="sm"
+                className="!rounded-full"
+              />
+              <span className="hidden text-sm font-medium sm:inline">{member.firstName}</span>
               <ChevronDown className="h-4 w-4 text-slate-400" />
             </Button>
           </DropdownMenuTrigger>
