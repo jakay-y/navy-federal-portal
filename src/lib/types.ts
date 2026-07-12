@@ -1,5 +1,5 @@
 export type TransactionType = "credit" | "debit";
-export type TransactionStatus = "completed" | "pending" | "failed" | "on_hold";
+export type TransactionStatus = "completed" | "pending" | "failed" | "on_hold" | "declined";
 export type AccountType = "checking" | "savings";
 
 export interface Transaction {

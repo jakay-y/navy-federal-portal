@@ -164,7 +164,7 @@ export function OverviewTab({
                     onClick={() => onViewReceipt(txn.id)}
                     className="text-xs text-accent-blue hover:underline"
                   >
-                    Receipt
+                    {txn.status === "declined" ? "Details" : "Receipt"}
                   </button>
                 </div>
               </div>

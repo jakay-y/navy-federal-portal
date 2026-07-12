@@ -8,13 +8,14 @@ import { InvestmentsTab } from "@/components/dashboard/investments-tab";
 import { TransactionsTab } from "@/components/dashboard/transactions-tab";
 import { SettingsTab } from "@/components/dashboard/settings-tab";
 import { ReceiptModal } from "@/components/dashboard/receipt-modal";
+import { DeclinedTransferModal } from "@/components/dashboard/declined-transfer-modal";
 import { useMember } from "@/context/member-context";
 
 export default function DashboardPage() {
   const router = useRouter();
   const { isAuthenticated, hydrated, transactions } = useMember();
   const [activeTab, setActiveTab] = useState("overview");
-  const [receiptTxnId, setReceiptTxnId] = useState<string | null>(null);
+  const [selectedTxnId, setSelectedTxnId] = useState<string | null>(null);
 
   useEffect(() => {
     if (hydrated && !isAuthenticated) {
@@ -30,7 +31,12 @@ export default function DashboardPage() {
     );
   }
 
-  const receiptTransaction = transactions.find((t) => t.id === receiptTxnId) ?? null;
+  const selectedTransaction = transactions.find((t) => t.id === selectedTxnId) ?? null;
+  const isDeclined = selectedTransaction?.status === "declined";
+
+  const handleViewTransaction = (id: string) => {
+    setSelectedTxnId(id);
+  };
 
   return (
     <div className="min-h-screen bg-slate-50">
@@ -40,21 +46,27 @@ export default function DashboardPage() {
         {activeTab === "overview" && (
           <OverviewTab
             onViewAllTransactions={() => setActiveTab("transactions")}
-            onViewReceipt={setReceiptTxnId}
+            onViewReceipt={handleViewTransaction}
             onViewInvestments={() => setActiveTab("investments")}
           />
         )}
         {activeTab === "investments" && <InvestmentsTab />}
         {activeTab === "transactions" && (
-          <TransactionsTab onViewReceipt={setReceiptTxnId} />
+          <TransactionsTab onViewReceipt={handleViewTransaction} />
         )}
         {activeTab === "settings" && <SettingsTab />}
       </main>
 
       <ReceiptModal
-        transaction={receiptTransaction}
-        open={!!receiptTxnId}
-        onOpenChange={(open) => !open && setReceiptTxnId(null)}
+        transaction={selectedTransaction}
+        open={!!selectedTxnId && !isDeclined}
+        onOpenChange={(open) => !open && setSelectedTxnId(null)}
+      />
+
+      <DeclinedTransferModal
+        transaction={selectedTransaction}
+        open={!!selectedTxnId && isDeclined}
+        onOpenChange={(open) => !open && setSelectedTxnId(null)}
       />
     </div>
   );

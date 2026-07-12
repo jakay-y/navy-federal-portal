@@ -130,7 +130,7 @@ export function TransactionsTab({ onViewReceipt }: TransactionsTabProps) {
                       className="gap-1 text-accent-blue"
                     >
                       <FileText className="h-3.5 w-3.5" />
-                      Receipt
+                      {txn.status === "declined" ? "Details" : "Receipt"}
                     </Button>
                   </TableCell>
                 </TableRow>
@@ -168,7 +168,7 @@ export function TransactionsTab({ onViewReceipt }: TransactionsTabProps) {
                 onClick={() => onViewReceipt(txn.id)}
               >
                 <FileText className="h-3.5 w-3.5" />
-                View Receipt
+                {txn.status === "declined" ? "View Details" : "View Receipt"}
               </Button>
             </div>
           ))}

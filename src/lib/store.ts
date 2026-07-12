@@ -203,6 +203,55 @@ export function getDefaultTransactionsForReset(): Transaction[] {
   return [...DEFAULT_TRANSACTIONS];
 }
 
+export function updateTransactionDetails(
+  id: string,
+  updates: Partial<Transaction>
+): Transaction | null {
+  const state = loadState();
+  const txn = state.transactions.find((t) => t.id === id);
+  if (!txn) return null;
+
+  const snapshot: Transaction = { ...txn };
+
+  if (snapshot.status === "completed") {
+    applyBalanceChange(state.member, snapshot, -1);
+  }
+
+  Object.assign(txn, updates);
+
+  if (txn.status === "completed") {
+    applyBalanceChange(state.member, txn, 1);
+  }
+
+  saveState(state);
+  return txn;
+}
+
+export function deleteTransaction(id: string): boolean {
+  const state = loadState();
+  const idx = state.transactions.findIndex((t) => t.id === id);
+  if (idx === -1) return false;
+
+  const txn = state.transactions[idx];
+  if (txn.status === "completed") {
+    applyBalanceChange(state.member, txn, -1);
+  }
+
+  state.transactions.splice(idx, 1);
+  saveState(state);
+  return true;
+}
+
+export function createAdminTransaction(txn: Transaction): Transaction {
+  const state = loadState();
+  state.transactions.unshift(txn);
+  if (txn.status === "completed") {
+    applyBalanceChange(state.member, txn, 1);
+  }
+  saveState(state);
+  return txn;
+}
+
 export function purchaseStock(params: {
   ticker: string;
   name: string;

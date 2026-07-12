@@ -17,14 +17,16 @@ export function Logo({ className, size = "md" }: LogoProps) {
 
   return (
     <div className={cn("flex shrink-0 items-center", className)}>
-      <Image
-        src={LOGO_SRC}
-        alt="Navy Federal Credit Union"
-        width={320}
-        height={64}
-        priority
-        className={cn("w-auto object-contain", heights[size])}
-      />
+      <div className={cn("overflow-hidden rounded-xl", heights[size])}>
+        <Image
+          src={LOGO_SRC}
+          alt="Navy Federal Credit Union"
+          width={320}
+          height={64}
+          priority
+          className={cn("h-full w-auto object-contain", heights[size])}
+        />
+      </div>
     </div>
   );
 }

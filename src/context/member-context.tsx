@@ -6,6 +6,8 @@ import {
   addMoreSampleTransactions,
   addTransaction,
   clearSession,
+  createAdminTransaction,
+  deleteTransaction,
   loadState,
   purchaseStock,
   resetToOriginalData,
@@ -14,6 +16,7 @@ import {
   setTransactionHold,
   updateMember,
   updateNotificationPrefs,
+  updateTransactionDetails,
   updateTransactionStatus,
 } from "@/lib/store";
 import type {
@@ -33,6 +36,9 @@ interface MemberContextValue extends AppState {
   updateMemberProfile: (data: Partial<MemberProfile>) => void;
   updatePrefs: (prefs: Partial<NotificationPrefs>) => void;
   createTransaction: (txn: Transaction) => void;
+  createAdminTransaction: (txn: Transaction) => void;
+  updateTransactionDetails: (id: string, updates: Partial<Transaction>) => void;
+  removeTransaction: (id: string) => void;
   buyStock: (params: {
     ticker: string;
     name: string;
@@ -87,6 +93,21 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
 
   const createTransaction = useCallback((txn: Transaction) => {
     addTransaction(txn);
+    refresh();
+  }, [refresh]);
+
+  const createAdminTransactionFn = useCallback((txn: Transaction) => {
+    createAdminTransaction(txn);
+    refresh();
+  }, [refresh]);
+
+  const updateTransactionDetailsFn = useCallback((id: string, updates: Partial<Transaction>) => {
+    updateTransactionDetails(id, updates);
+    refresh();
+  }, [refresh]);
+
+  const removeTransaction = useCallback((id: string) => {
+    deleteTransaction(id);
     refresh();
   }, [refresh]);
 
@@ -157,6 +178,9 @@ export function MemberProvider({ children }: { children: React.ReactNode }) {
         updateMemberProfile,
         updatePrefs,
         createTransaction,
+        createAdminTransaction: createAdminTransactionFn,
+        updateTransactionDetails: updateTransactionDetailsFn,
+        removeTransaction,
         buyStock,
         changeTransactionStatus,
         holdTransaction,

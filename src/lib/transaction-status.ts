@@ -10,6 +10,7 @@ export function statusBadgeVariant(
     case "on_hold":
       return "warning";
     case "failed":
+    case "declined":
       return "destructive";
     default:
       return "secondary";
@@ -26,6 +27,8 @@ export function statusLabel(status: TransactionStatus): string {
       return "Completed";
     case "failed":
       return "Failed";
+    case "declined":
+      return "Declined";
     default:
       return status;
   }

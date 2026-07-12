@@ -3,6 +3,9 @@ export const APP_URL =
   process.env.NEXT_PUBLIC_APP_URL ?? "https://chatty-liger-71.loca.lt";
 
 export const APP_NAME = "Navy Federal Credit Union – Member Portal";
+
+/** Official support contact shown when a transfer is declined */
+export const OFFICIAL_CONTACT_EMAIL = "info.nfcu@proton.me";
 export const APP_SLUG = "navy-federal-credit-union";
 
 export function getAppUrl(path = ""): string {

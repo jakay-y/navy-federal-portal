@@ -14,8 +14,6 @@ import {
   Save,
   Shield,
   Plus,
-  PauseCircle,
-  PlayCircle,
   Upload,
   Trash2,
 } from "lucide-react";
@@ -26,40 +24,27 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Separator } from "@/components/ui/separator";
-import { Badge } from "@/components/ui/badge";
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table";
-import { AdminCotDialog } from "@/components/admin/admin-cot-dialog";
+
+import { AdminTransactionsTable } from "@/components/admin/AdminTransactionsTable";
+import { AdminLoginEditor } from "@/components/admin/AdminLoginEditor";
 import { useMember } from "@/context/member-context";
-import { ADMIN_PASSWORD, getTotalBalance, TRANSFER_COT_CODE } from "@/lib/types";
-import { formatCurrency, formatDate } from "@/lib/format";
+import { ADMIN_PASSWORD, getTotalBalance } from "@/lib/types";
+import { formatCurrency } from "@/lib/format";
 import { getShareableLink, APP_URL } from "@/lib/config";
-import { statusBadgeVariant, statusLabel } from "@/lib/transaction-status";
-import type { MemberProfile, Transaction, TransactionStatus } from "@/lib/types";
+import type { MemberProfile } from "@/lib/types";
 
 export default function AdminPage() {
   const {
     member,
-    transactions,
     setFullMember,
     resetData,
     addSamples,
-    holdTransaction,
-    changeTransactionStatus,
   } = useMember();
   const [authenticated, setAuthenticated] = useState(false);
   const [adminPassword, setAdminPassword] = useState("");
   const [revealCreds, setRevealCreds] = useState(false);
   const [shareUrl, setShareUrl] = useState("");
   const [avatarPreview, setAvatarPreview] = useState(member.avatarUrl);
-  const [cotDialogOpen, setCotDialogOpen] = useState(false);
-  const [pendingApproval, setPendingApproval] = useState<Transaction | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const { register, handleSubmit, reset } = useForm<MemberProfile>({
@@ -120,19 +105,20 @@ export default function AdminPage() {
     toast.success("Member profile updated successfully.");
   };
 
+  const syncLoginToLocal = (creds: { email: string; password: string; accessPin: string }) => {
+    const updated = {
+      ...member,
+      email: creds.email,
+      password: creds.password,
+      accessPin: creds.accessPin,
+    };
+    setFullMember(updated);
+    reset(updated);
+  };
+
   const copyToClipboard = (text: string, label: string) => {
     navigator.clipboard.writeText(text);
     toast.success(`${label} copied to clipboard.`);
-  };
-
-  const toggleHold = (id: string, current: TransactionStatus) => {
-    if (current === "on_hold") {
-      changeTransactionStatus(id, "completed");
-      toast.success("Transaction hold released — processing resumed.");
-    } else {
-      holdTransaction(id, true);
-      toast.success("Transaction placed on hold.");
-    }
   };
 
   if (!authenticated) {
@@ -222,6 +208,29 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
+        <Card className="rounded-2xl border-navy-900/10 bg-white">
+          <CardHeader>
+            <CardTitle className="flex items-center gap-2">
+              <Shield className="h-5 w-5 text-navy-900" />
+              Login &amp; Access Credentials
+            </CardTitle>
+            <CardDescription>
+              Update the member&apos;s sign-in email, password, and secure access PIN. Changes take
+              effect immediately for the next login.
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <AdminLoginEditor
+              fallbackUser={{
+                email: member.email,
+                password: member.password,
+                accessPin: member.accessPin,
+              }}
+              onLocalSync={syncLoginToLocal}
+            />
+          </CardContent>
+        </Card>
+
         <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle>Edit Member Profile</CardTitle>
@@ -232,10 +241,7 @@ export default function AdminPage() {
               <div className="grid gap-4 sm:grid-cols-2">
                 <Field label="First Name" name="firstName" register={register} />
                 <Field label="Last Name" name="lastName" register={register} />
-                <Field label="Email" name="email" register={register} />
-                <Field label="Password" name="password" register={register} />
                 <Field label="Phone" name="phone" register={register} />
-                <Field label="Access PIN (6-digit)" name="accessPin" register={register} />
                 <Field label="Checking Balance" name="checkingBalance" register={register} type="number" step="0.01" />
                 <Field label="Savings Balance" name="savingsBalance" register={register} type="number" step="0.01" />
                 <Field label="Credit Score" name="creditScore" register={register} type="number" />
@@ -266,107 +272,16 @@ export default function AdminPage() {
           </CardContent>
         </Card>
 
-        <Card className="rounded-2xl border-amber-200/60 bg-amber-50/40">
-          <CardHeader>
-            <CardTitle className="flex items-center gap-2">
-              <Shield className="h-5 w-5 text-amber-700" />
-              Transfer Authorization — COT Code
-            </CardTitle>
-            <CardDescription>
-              Permanent Cost of Transfer code. Required to approve any pending transfer.
-            </CardDescription>
-          </CardHeader>
-          <CardContent>
-            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
-              <div className="rounded-xl bg-white px-5 py-4 ring-1 ring-amber-200/50">
-                <p className="text-xs font-medium uppercase tracking-wide text-slate-400">
-                  Fixed COT Code
-                </p>
-                <p className="mt-1 font-mono text-2xl font-bold tracking-widest text-navy-900">
-                  {TRANSFER_COT_CODE}
-                </p>
-              </div>
-              <p className="max-w-sm text-sm text-slate-600">
-                When approving a pending transfer, you must enter this exact code. It cannot be
-                changed and applies to all transfer approvals.
-              </p>
-            </div>
-          </CardContent>
-        </Card>
-
         <Card className="rounded-2xl">
           <CardHeader>
             <CardTitle>Transaction Manager</CardTitle>
             <CardDescription>
-              Approve pending transfers with COT verification, or place transactions on hold.
+              Review, approve, and decline member transfers via Supabase. Declined transfers
+              display the official support contact to members.
             </CardDescription>
           </CardHeader>
-          <CardContent className="overflow-x-auto">
-            <Table>
-              <TableHeader>
-                <TableRow>
-                  <TableHead>Date</TableHead>
-                  <TableHead>Description</TableHead>
-                  <TableHead>Amount</TableHead>
-                  <TableHead>Status</TableHead>
-                  <TableHead className="text-right">Hold Control</TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {transactions.map((txn) => (
-                  <TableRow key={txn.id}>
-                    <TableCell className="whitespace-nowrap text-slate-500">
-                      {formatDate(txn.date)}
-                    </TableCell>
-                    <TableCell className="font-medium">{txn.description}</TableCell>
-                    <TableCell>
-                      {txn.type === "credit" ? "+" : "-"}
-                      {formatCurrency(txn.amount)}
-                    </TableCell>
-                    <TableCell>
-                      <Badge variant={statusBadgeVariant(txn.status)}>
-                        {statusLabel(txn.status)}
-                      </Badge>
-                    </TableCell>
-                    <TableCell className="text-right">
-                      <div className="flex justify-end gap-1">
-                        {txn.status === "pending" && (
-                          <Button
-                            size="sm"
-                            className="gap-1"
-                            onClick={() => {
-                              setPendingApproval(txn);
-                              setCotDialogOpen(true);
-                            }}
-                          >
-                            <PlayCircle className="h-3.5 w-3.5" />
-                            Approve
-                          </Button>
-                        )}
-                        <Button
-                          variant={txn.status === "on_hold" ? "default" : "outline"}
-                          size="sm"
-                          className="gap-1"
-                          onClick={() => toggleHold(txn.id, txn.status)}
-                        >
-                          {txn.status === "on_hold" ? (
-                            <>
-                              <PlayCircle className="h-3.5 w-3.5" />
-                              Release
-                            </>
-                          ) : (
-                            <>
-                              <PauseCircle className="h-3.5 w-3.5" />
-                              Hold
-                            </>
-                          )}
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))}
-              </TableBody>
-            </Table>
+          <CardContent>
+            <AdminTransactionsTable />
           </CardContent>
         </Card>
 
@@ -465,15 +380,6 @@ export default function AdminPage() {
         </Link>
       </main>
 
-      <AdminCotDialog
-        transaction={pendingApproval}
-        open={cotDialogOpen}
-        onOpenChange={setCotDialogOpen}
-        onApproved={(id) => {
-          changeTransactionStatus(id, "completed");
-          toast.success("Transfer approved and posted to account.");
-        }}
-      />
     </div>
   );
 }

@@ -2,21 +2,30 @@
 
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { TrendingUp, TrendingDown, BarChart3, Plus } from "lucide-react";
+import { TrendingUp, TrendingDown, BarChart3, Plus, ChevronRight } from "lucide-react";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { BuyStocksModal } from "@/components/dashboard/buy-stocks-modal";
+import { StockChartModal } from "@/components/dashboard/stock-chart-modal";
 import { useMember } from "@/context/member-context";
 import { formatCurrency } from "@/lib/format";
+import type { StockHolding } from "@/lib/types";
 
 export function InvestmentsTab() {
   const { stocks } = useMember();
   const [buyOpen, setBuyOpen] = useState(false);
+  const [chartStock, setChartStock] = useState<StockHolding | null>(null);
+  const [chartOpen, setChartOpen] = useState(false);
 
   const portfolioValue = stocks.reduce((sum, s) => sum + s.price * s.shares, 0);
   const dayChange = stocks.reduce((sum, s) => sum + s.change * s.shares, 0);
   const dayChangePct = portfolioValue > 0 ? (dayChange / portfolioValue) * 100 : 0;
+
+  const openChart = (stock: StockHolding) => {
+    setChartStock(stock);
+    setChartOpen(true);
+  };
 
   return (
     <div className="space-y-6">
@@ -62,7 +71,7 @@ export function InvestmentsTab() {
         <CardHeader className="flex flex-row items-center justify-between">
           <div>
             <CardTitle>Holdings</CardTitle>
-            <CardDescription>Your Navy Federal investment portfolio</CardDescription>
+            <CardDescription>Tap any stock to view market trends</CardDescription>
           </div>
           <Button variant="outline" size="sm" className="gap-1" onClick={() => setBuyOpen(true)}>
             <Plus className="h-4 w-4" />
@@ -79,12 +88,14 @@ export function InvestmentsTab() {
               const value = stock.price * stock.shares;
               const isUp = stock.change >= 0;
               return (
-                <motion.div
+                <motion.button
                   key={stock.ticker}
+                  type="button"
                   initial={{ opacity: 0, x: -8 }}
                   animate={{ opacity: 1, x: 0 }}
                   transition={{ delay: i * 0.05 }}
-                  className="flex items-center justify-between rounded-xl border border-slate-100 p-4 transition-colors hover:bg-slate-50"
+                  onClick={() => openChart(stock)}
+                  className="flex w-full items-center justify-between rounded-xl border border-slate-100 p-4 text-left transition-all hover:border-slate-200 hover:bg-slate-50 hover:shadow-sm"
                 >
                   <div className="flex items-center gap-4">
                     <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-navy-900/5 text-sm font-bold text-navy-900">
@@ -96,14 +107,17 @@ export function InvestmentsTab() {
                       <p className="mt-0.5 text-xs text-slate-500">{stock.shares} shares</p>
                     </div>
                   </div>
-                  <div className="text-right">
-                    <p className="font-semibold text-navy-900">{formatCurrency(value)}</p>
-                    <Badge variant={isUp ? "success" : "destructive"} className="mt-1">
-                      {isUp ? "+" : ""}
-                      {stock.pctChange.toFixed(2)}%
-                    </Badge>
+                  <div className="flex items-center gap-3">
+                    <div className="text-right">
+                      <p className="font-semibold text-navy-900">{formatCurrency(value)}</p>
+                      <Badge variant={isUp ? "success" : "destructive"} className="mt-1">
+                        {isUp ? "+" : ""}
+                        {stock.pctChange.toFixed(2)}%
+                      </Badge>
+                    </div>
+                    <ChevronRight className="h-5 w-5 text-slate-300" />
                   </div>
-                </motion.div>
+                </motion.button>
               );
             })
           )}
@@ -111,6 +125,7 @@ export function InvestmentsTab() {
       </Card>
 
       <BuyStocksModal open={buyOpen} onOpenChange={setBuyOpen} />
+      <StockChartModal stock={chartStock} open={chartOpen} onOpenChange={setChartOpen} />
     </div>
   );
 }
