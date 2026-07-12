@@ -11,6 +11,7 @@ export interface Transaction {
   category: string;
   status: TransactionStatus;
   referenceNumber: string;
+  remark?: string;
   accountType?: AccountType;
 }
 

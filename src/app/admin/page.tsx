@@ -276,8 +276,8 @@ export default function AdminPage() {
           <CardHeader>
             <CardTitle>Transaction Manager</CardTitle>
             <CardDescription>
-              Review, approve, and decline member transfers via Supabase. Declined transfers
-              display the official support contact to members.
+              View, add, and edit all transaction details — date, description, remark, amount,
+              type, category, account, reference, and status. Approve or decline pending transfers.
             </CardDescription>
           </CardHeader>
           <CardContent>
